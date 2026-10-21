@@ -59,8 +59,9 @@ type AppearanceSettings struct {
 	TerminalFontWeightBold int `json:"terminalFontWeightBold"`
 	// TerminalLineHeight multiplies the cell height; TerminalLetterSpacing
 	// widens the cell by whole device pixels. Zero means nothing persisted.
-	TerminalLineHeight    float64 `json:"terminalLineHeight"`
-	TerminalLetterSpacing int     `json:"terminalLetterSpacing"`
+	TerminalLineHeight     float64 `json:"terminalLineHeight"`
+	TerminalLetterSpacing  int     `json:"terminalLetterSpacing"`
+	TerminalShowScrollbars bool    `json:"terminalShowScrollbars"`
 	// TerminalShowWindows lists every active session's tmux windows in the
 	// terminal sidebar, not just the attached session's. Ships on.
 	TerminalShowWindows bool `json:"terminalShowWindows"`
@@ -114,6 +115,7 @@ func (s *SettingsService) AppearanceSettings(ctx context.Context) (AppearanceSet
 		TerminalFontWeightBold: current.TerminalFontWeightBold,
 		TerminalLineHeight:     current.TerminalLineHeight,
 		TerminalLetterSpacing:  current.TerminalLetterSpacing,
+		TerminalShowScrollbars: current.TerminalShowScrollbars,
 		TerminalShowWindows:    current.TerminalShowWindows,
 		TerminalShowStatusBar:  current.TerminalShowStatusBar,
 		TerminalPoolSize:       current.TerminalPoolSize,
@@ -172,6 +174,10 @@ func (s *SettingsService) SetTerminalLineHeight(ctx context.Context, lineHeight 
 
 func (s *SettingsService) SetTerminalLetterSpacing(ctx context.Context, spacing int) error {
 	return s.settings.SetTerminalLetterSpacing(ctx, spacing)
+}
+
+func (s *SettingsService) SetTerminalShowScrollbars(ctx context.Context, show bool) error {
+	return s.settings.SetTerminalShowScrollbars(ctx, show)
 }
 
 func (s *SettingsService) SetTerminalShowWindows(ctx context.Context, show bool) error {

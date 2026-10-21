@@ -1,3 +1,4 @@
+import { useTerminalScrollbars } from '../useTerminalScrollbars'
 import { flushPromises } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ISearchOptions } from '@xterm/addon-search'
@@ -854,6 +855,37 @@ describe('useTerminalWindows', () => {
     for (const term of xterm.FakeTerminal.instances) {
       expect(term.resize).toHaveBeenLastCalledWith(213, 55)
     }
+  })
+
+  it('re-votes when the scrollbar toggles or a split is zoomed, without resizing the authoritative grid', async () => {
+    vi.useFakeTimers()
+    const { showScrollbars } = useTerminalScrollbars()
+    const client = fakeClient()
+    const session = open(client)
+    await session.start()
+    await flushPromises()
+    mountWindow(session, '@1', paneHostOf(120, 40))
+    await vi.advanceTimersByTimeAsync(100)
+    expect(client.resize).toHaveBeenLastCalledWith('hive-abc', 120, 40)
+    showScrollbars.value = true
+    await vi.advanceTimersByTimeAsync(100)
+    expect(client.resize).toHaveBeenLastCalledWith('hive-abc', 118, 40)
+    const socket = sockets[0]
+    const layout: PaneLayout = {
+      split: 'leftright', x: 0, y: 0, width: 213, height: 55,
+      cells: [leaf('%1', 106, 55), leaf('%9', 106, 55, 107)],
+    }
+    socket.onmessage?.({ data: windowFrame('layout-changed', '@1', { activePane: '%1', layout, zoomed: false }) })
+    await vi.advanceTimersByTimeAsync(100)
+    expect(client.resize).toHaveBeenLastCalledWith('hive-abc', 120, 40)
+    socket.onmessage?.({ data: windowFrame('layout-changed', '@1', { activePane: '%1', layout, zoomed: true }) })
+    await vi.advanceTimersByTimeAsync(100)
+    expect(client.resize).toHaveBeenLastCalledWith('hive-abc', 118, 40)
+    expect(session.tabs.value[0].panes[0].term.resize).toHaveBeenLastCalledWith(213, 55)
+    showScrollbars.value = false
+    await vi.advanceTimersByTimeAsync(100)
+    expect(client.resize).toHaveBeenLastCalledWith('hive-abc', 120, 40)
+    session.dispose()
   })
 
   it('votes from the window box, not a pane box', async () => {

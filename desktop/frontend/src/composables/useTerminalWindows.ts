@@ -18,6 +18,7 @@ import {
   type WindowState,
 } from '../lib/terminalClient'
 import { loadTerminalFaces, terminalFontStack, resetTerminalFacesForTests } from '../lib/terminalFaces'
+import { scrollbarWidthFor, useTerminalScrollbars } from './useTerminalScrollbars'
 import { proposeGrid, terminalCellSize, type CellSize } from '../lib/terminalGrid'
 import { activePaneOf, paneGrids, windowPanes } from '../lib/terminalLayout'
 import { claimAtlasRenderer } from '../lib/terminalRenderer'
@@ -251,6 +252,7 @@ export function useTerminalWindows(slug: string, client: TerminalClient): UseTer
   const cell = ref<CellSize | null>(null)
   const search = ref<TerminalSearch>({ open: false, query: '', matches: 0, index: 0 })
 
+  const { showScrollbars } = useTerminalScrollbars()
   const windows = new Map<string, WindowRuntime>()
   const panes = new Map<string, PaneRuntime>()
   const scope = effectScope(true)
@@ -285,6 +287,10 @@ export function useTerminalWindows(slug: string, client: TerminalClient): UseTer
   const pendingCommands = new Map<string, () => boolean>()
 
   scope.run(() => {
+    watch(() => {
+      const tab = findTab(activeWindowId.value)
+      return tab ? scrollbarWidthFor(tab, showScrollbars.value) : 0
+    }, scheduleVote)
     const { theme } = useTheme()
     watch(theme, () => {
       const palette = xtermTheme()
@@ -652,7 +658,7 @@ export function useTerminalWindows(slug: string, client: TerminalClient): UseTer
   }
 
   // Vote the whole window box against shared cell metrics; tmux remains
-  // authoritative for the actual grid. Hidden scrollbars reserve no column.
+  // authoritative for the actual grid. Only a single visible pane gets a gutter.
   function voteSize(): void {
     const tab = findTab(activeWindowId.value)
     const host = tab ? windows.get(tab.windowId)?.host : undefined
@@ -664,7 +670,7 @@ export function useTerminalWindows(slug: string, client: TerminalClient): UseTer
     if (!host.clientWidth || !host.clientHeight) return
     const measured = measureCell()
     if (!measured) return
-    const proposed = proposeGrid({ width: host.clientWidth, height: host.clientHeight }, measured)
+    const proposed = proposeGrid({ width: host.clientWidth - scrollbarWidthFor(tab, showScrollbars.value), height: host.clientHeight }, measured)
     if (!proposed) return
     scheduleConstraintCheck()
     if (vote && proposed.cols === vote.cols && proposed.rows === vote.rows) return

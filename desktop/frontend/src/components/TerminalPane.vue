@@ -2,7 +2,7 @@
 import { onMounted, ref } from 'vue'
 import type { TerminalPane } from '../composables/useTerminalWindows'
 
-const props = defineProps<{ pane: TerminalPane; active: boolean }>()
+const props = defineProps<{ pane: TerminalPane; active: boolean; scrollbarWidth: number }>()
 const emit = defineEmits<{ mount: [paneId: string, host: HTMLElement]; select: [paneId: string] }>()
 
 const host = ref<HTMLElement | null>(null)
@@ -17,6 +17,8 @@ onMounted(() => {
        remainder also accepts focus. -->
   <div
     class="terminal-pane absolute overflow-hidden"
+    :class="{ 'terminal-pane-scrollbar': scrollbarWidth > 0 }"
+    :style="{ '--terminal-scrollbar-width': `${scrollbarWidth}px` }"
     data-testid="terminal-pane-host"
     :data-pane-id="pane.paneId"
     :data-active-pane="active ? 'true' : undefined"
@@ -27,8 +29,21 @@ onMounted(() => {
 </template>
 
 <style scoped>
-/* xterm's canvas covers its viewport scrollbar. Keep it hidden; wheel input
-   and the scrolled-up control still expose scrollback. */
+/* The pane includes a gutter beyond the canvas when its scrollbar is enabled. */
 .terminal-pane :deep(.xterm-viewport) { scrollbar-width: none; }
 .terminal-pane :deep(.xterm-viewport::-webkit-scrollbar) { display: none; }
+.terminal-pane-scrollbar :deep(.xterm-viewport) { scrollbar-width: auto; }
+.terminal-pane-scrollbar :deep(.xterm-viewport::-webkit-scrollbar) {
+  display: block;
+  width: var(--terminal-scrollbar-width);
+}
+.terminal-pane-scrollbar :deep(.xterm-viewport::-webkit-scrollbar-thumb) {
+  background: var(--color-text-4);
+  border: 3px solid transparent;
+  border-radius: 6px;
+  background-clip: padding-box;
+}
+.terminal-pane-scrollbar :deep(.xterm-viewport::-webkit-scrollbar-track) {
+  background: var(--color-app);
+}
 </style>

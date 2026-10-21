@@ -120,6 +120,10 @@ export function SetTerminalPoolSize(size: number): $CancellablePromise<void> {
     return $Call.ByID(3703274857, size);
 }
 
+export function SetTerminalShowScrollbars(show: boolean): $CancellablePromise<void> {
+    return $Call.ByID(3374749580, show);
+}
+
 export function SetTerminalShowStatusBar(show: boolean): $CancellablePromise<void> {
     return $Call.ByID(441812278, show);
 }

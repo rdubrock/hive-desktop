@@ -1,6 +1,7 @@
 import { mount, type VueWrapper } from '@vue/test-utils'
 import { describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
+import { useTerminalScrollbars } from '../../composables/useTerminalScrollbars'
 import type { Terminal } from '@xterm/xterm'
 import TerminalTab from '../TerminalTab.vue'
 import type { TerminalWindowTab, UseTerminalWindows } from '../../composables/useTerminalWindows'
@@ -214,4 +215,23 @@ describe('TerminalTab', () => {
     expect(paneHost(wrapper, '%1').style.display).toBe('none')
     expect(wrapper.findAll('[data-testid="terminal-pane-divider"]').every((el) => !el.attributes('style'))).toBe(true)
   })
+})
+
+it('reserves a scrollbar gutter only for a single visible pane and updates live', async () => {
+  const { showScrollbars } = useTerminalScrollbars()
+  const { wrapper } = mountTab(tabWith(single))
+  expect(paneHost(wrapper, '%1').style.width).toBe('1200px')
+  showScrollbars.value = true
+  await wrapper.vm.$nextTick()
+  expect(paneHost(wrapper, '%1').style.width).toBe('1212px')
+  expect(paneHost(wrapper, '%1').classList.contains('terminal-pane-scrollbar')).toBe(true)
+  await wrapper.setProps({ tab: tabWith(sideBySide) })
+  expect(paneHost(wrapper, '%1').style.width).toBe('600px')
+  expect(paneHost(wrapper, '%1').classList.contains('terminal-pane-scrollbar')).toBe(false)
+  await wrapper.setProps({ tab: tabWith(sideBySide, { zoomed: true }) })
+  expect(paneHost(wrapper, '%1').style.width).toBe('1212px')
+  showScrollbars.value = false
+  await wrapper.vm.$nextTick()
+  expect(paneHost(wrapper, '%1').style.width).toBe('1200px')
+  wrapper.unmount()
 })

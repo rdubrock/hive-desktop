@@ -188,6 +188,7 @@ func TestSettingsServiceAppearanceSettingsDefaultsToUnset(t *testing.T) {
 	require.Equal(t, settings.DefaultTerminalFontSizePx, got.TerminalFontSizePx)
 	require.Empty(t, got.CanvasFontSize)
 	require.Empty(t, got.CanvasLineSpacing)
+	require.False(t, got.TerminalShowScrollbars, "terminal scrollbars ship hidden")
 	require.True(t, got.TerminalShowWindows, "the terminal window listing ships on")
 	require.True(t, got.TerminalShowStatusBar, "the session status bar ships on")
 	require.Equal(t, 3, got.TerminalPoolSize, "the attach pool ships at three sessions")
@@ -257,4 +258,25 @@ func TestSettingsServiceTerminalShowWindowsOffSurvivesUnrelatedSaves(t *testing.
 	got, err := service.Appearance(t.Context())
 	require.NoError(t, err)
 	require.False(t, got.TerminalShowWindows)
+}
+
+func TestSettingsServiceTerminalScrollbarsPersistAndRespectEnvironment(t *testing.T) {
+	t.Setenv(settings.EnvConfigDir, filepath.Join(t.TempDir(), "config"))
+	service := newSettingsService(SettingsDeps{Store: settings.NewStore(settings.SettingsPath())})
+	for _, show := range []bool{true, false} {
+		require.NoError(t, service.SetTerminalShowScrollbars(t.Context(), show))
+		require.NoError(t, service.SetTheme(t.Context(), "midnight"))
+		reopened := newSettingsService(SettingsDeps{Store: settings.NewStore(settings.SettingsPath())})
+		got, err := reopened.Appearance(t.Context())
+		require.NoError(t, err)
+		require.Equal(t, show, got.TerminalShowScrollbars)
+	}
+	t.Setenv("HIVE_DESKTOP_APPEARANCE_TERMINAL_SHOW_SCROLLBARS", "true")
+	require.NoError(t, service.SetTheme(t.Context(), "dark"))
+	got, err := service.Appearance(t.Context())
+	require.NoError(t, err)
+	require.True(t, got.TerminalShowScrollbars)
+	stored, err := settings.LoadPersistedSettings()
+	require.NoError(t, err)
+	require.False(t, stored.Appearance.TerminalShowScrollbars)
 }
