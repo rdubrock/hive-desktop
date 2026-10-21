@@ -86,10 +86,15 @@ async function waitForFittedTail(pane: Locator) {
     const tailGap = viewport.scrollHeight - viewport.clientHeight - viewport.scrollTop
     return remaining >= 0 && remaining < 12 && viewport.scrollHeight > viewport.clientHeight && Math.abs(tailGap) <= 1
   })).toBe(true)
-  // xterm synchronizes its buffer on the DOM scroll event after moving to the tail.
-  await pane.evaluate(() => new Promise<void>((resolve) => {
-    requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
-  }))
+}
+
+async function wheelUp(page: Page, pane: Locator, bottom: Locator) {
+  await pane.hover()
+  // A resize can consume the first wheel event while xterm synchronizes its viewport.
+  await expect.poll(async () => {
+    await page.mouse.wheel(0, -300)
+    return bottom.isVisible()
+  }).toBe(true)
 }
 
 test('terminal scrollbars persist, drag beside the canvas, and follow single/split/zoom layouts', async ({ page }) => {
@@ -117,9 +122,7 @@ test('terminal scrollbars persist, drag beside the canvas, and follow single/spl
   const bottom = page.getByTestId('terminal-scroll-to-bottom')
   await waitForFittedTail(pane)
   await page.screenshot({ path: `screenshots/terminal-scrollbars-${test.info().project.name}.png` })
-  await pane.hover()
-  await page.mouse.wheel(0, -300)
-  await expect(bottom).toBeVisible()
+  await wheelUp(page, pane, bottom)
   await bottom.click()
   await expect(bottom).toBeHidden()
 
@@ -153,7 +156,5 @@ test('terminal scrollbars persist, drag beside the canvas, and follow single/spl
   await navigate(page, '/terminal/scrollbars')
   await expect(pane).not.toHaveClass(/terminal-pane-scrollbar/)
   await waitForFittedTail(pane)
-  await pane.hover()
-  await page.mouse.wheel(0, -300)
-  await expect(bottom).toBeVisible()
+  await wheelUp(page, pane, bottom)
 })
